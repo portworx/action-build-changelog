@@ -1,0 +1,83 @@
+name: 'Build changelog between two revisions'
+description: 'Checkout a repository on the specified branch and construct a changelog between specified revisions.'
+
+inputs:
+  repository:
+    description: 'The repository to checkout.'
+    required: true
+  branch:
+    description: 'The branch of the repository to checkout.'
+    required: true
+    default: 'master'
+  from-version:
+    description: 'Changes after this revision will be included.'
+    required: true
+  to-version:
+    description: 'Changes up to this revision will be included.'
+    required: true
+  version-prefix:
+    description: 'Value to prepend before versions. Use e.g. if passed values are tags with their "v" prefix missing.'
+    required: false
+  token:
+    description: 'Personal access token (PAT) used to fetch the repository.'
+    required: true
+
+outputs:
+  changelog:
+    description: 'Constructed changelog from the version difference.'
+    value: ${{ steps.changelog.outputs.changelog }}
+  changed:
+    description: 'Indicates whether the versions differ (changelog was built).'
+    value: ${{ steps.changed.outputs.changed }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Set change
+      id: changed
+      shell: bash
+      run: |
+        if [ ${{ inputs.from-version }} == ${{ inputs.to-version }} ] ; then
+          echo "::set-output name=changed::false"
+        else
+          echo "::set-output name=changed::true"
+        fi
+    - name: Checkout target repository with history
+      if: ${{ steps.changed.outputs.changed == 'true'  }}
+      uses: actions/checkout@v2.3.4
+      with:
+        fetch-depth: 0
+        path: target-repository
+        repository: ${{ inputs.repository }}
+        ref: ${{ inputs.branch }}
+        token: ${{ inputs.token }}
+
+    # Existing actions usually rely on git tags and don't work with plain revisions.
+    # Building a simple changelog explicitly.
+    - name: Get Changelog
+      if: ${{ steps.changed.outputs.changed == 'true' }}
+      id: changelog
+      shell: bash      
+      run: |
+        cd target-repository
+        
+        from=${{ inputs.version-prefix }}${{ inputs.from-version }}
+        to=${{ inputs.version-prefix }}${{ inputs.to-version }}
+        log=$'## ${{ inputs.repository }}:\n'
+        log+=$(git log "${from}..${to}" \
+            --pretty=format:"- [%h](http://github.com/${{ inputs.repository }}/commit/%H) - %s (%aN)")
+        # Escape special characters.
+        log="${log//'`'/'\`'}"
+        log="${log//'"'/'\"'}"
+        log="${log//'%'/'%25'}"
+        log="${log//$'\n'/'%0A'}"
+        log="${log//$'\r'/'%0D'}"
+        # Add full repository qualifier to PR references.
+        # Changes PR-number strings like '(#100)' into '(owner/repository#100)'.
+        log=$(echo $log | sed -r 's|\(#([0-9]+)\)|(${{ inputs.repository }}#\1)|g')
+        
+        echo "::set-output name=changelog::${log}"
+    - name: Cleanup
+      if: ${{ steps.changed.outputs.changed == 'true'  }}
+      shell: bash
+      run: rm -rf target-repository
