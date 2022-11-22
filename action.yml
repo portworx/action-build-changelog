@@ -38,13 +38,13 @@ runs:
       shell: bash
       run: |
         if [ ${{ inputs.from-version }} == ${{ inputs.to-version }} ] ; then
-          echo "::set-output name=changed::false"
+          echo "changed=false" >> $GITHUB_OUTPUT
         else
-          echo "::set-output name=changed::true"
+          echo "changed=true" >> $GITHUB_OUTPUT
         fi
     - name: Checkout target repository with history
       if: ${{ steps.changed.outputs.changed == 'true'  }}
-      uses: actions/checkout@v2.3.4
+      uses: actions/checkout@v3
       with:
         fetch-depth: 0
         path: target-repository
@@ -76,7 +76,7 @@ runs:
         # Changes PR-number strings like '(#100)' into '(owner/repository#100)'.
         log=$(echo $log | sed -r 's|\(#([0-9]+)\)|(${{ inputs.repository }}#\1)|g')
         
-        echo "::set-output name=changelog::${log}"
+        echo "changelog=${log}" >> $GITHUB_OUTPUT
     - name: Cleanup
       if: ${{ steps.changed.outputs.changed == 'true'  }}
       shell: bash
