@@ -42,6 +42,7 @@ runs:
         else
           echo "changed=true" >> $GITHUB_OUTPUT
         fi
+
     - name: Checkout target repository with history
       if: ${{ steps.changed.outputs.changed == 'true'  }}
       uses: actions/checkout@v3
@@ -63,20 +64,20 @@ runs:
         
         from=${{ inputs.version-prefix }}${{ inputs.from-version }}
         to=${{ inputs.version-prefix }}${{ inputs.to-version }}
+
         log=$'## ${{ inputs.repository }}:\n'
         log+=$(git log "${from}..${to}" \
             --pretty=format:"- [%h](http://github.com/${{ inputs.repository }}/commit/%H) - %s (%aN)")
-        # Escape special characters.
-        log="${log//'`'/'\`'}"
-        log="${log//'"'/'\"'}"
-        log="${log//'%'/'%25'}"
-        log="${log//$'\n'/'%0A'}"
-        log="${log//$'\r'/'%0D'}"
+
         # Add full repository qualifier to PR references.
         # Changes PR-number strings like '(#100)' into '(owner/repository#100)'.
-        log=$(echo $log | sed -r 's|\(#([0-9]+)\)|(${{ inputs.repository }}#\1)|g')
+        log=$(echo "$log" | sed -r 's|\(#([0-9]+)\)|(${{ inputs.repository }}#\1)|g')
         
-        echo "changelog=${log}" >> $GITHUB_OUTPUT
+        # Store multiline changelog in the output.
+        echo "changelog<<EOF" >> $GITHUB_OUTPUT
+        echo "${log}" >> $GITHUB_OUTPUT
+        echo "EOF" >> $GITHUB_OUTPUT
+
     - name: Cleanup
       if: ${{ steps.changed.outputs.changed == 'true'  }}
       shell: bash
