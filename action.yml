@@ -53,8 +53,7 @@ runs:
       shell: bash
       run: |
         cd target-repository
-        FULL_COMMIT=$(git rev-parse ${{ inputs.version-prefix }}${{ inputs.to-version }})
-        git checkout $FULL_COMMIT
+        git checkout ${{ inputs.version-prefix }}${{ inputs.to-version }}
 
     # Existing actions usually rely on git tags and don't work with plain revisions.
     # Building a simple changelog explicitly.
