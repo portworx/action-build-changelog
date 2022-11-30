@@ -1,14 +1,10 @@
 name: 'Build changelog between two revisions'
-description: 'Checkout a repository on the specified branch and construct a changelog between specified revisions.'
+description: 'Checkout a repository and construct a changelog between specified revisions.'
 
 inputs:
   repository:
     description: 'The repository to checkout.'
     required: true
-  branch:
-    description: 'The branch of the repository to checkout.'
-    required: true
-    default: 'master'
   from-version:
     description: 'Changes after this revision will be included.'
     required: true
@@ -50,15 +46,21 @@ runs:
         fetch-depth: 0
         path: target-repository
         repository: ${{ inputs.repository }}
-        ref: ${{ inputs.branch }}
         token: ${{ inputs.token }}
+
+    - name: Checkout the target version commit
+      if: ${{ steps.changed.outputs.changed == 'true'  }}
+      shell: bash
+      run: |
+        cd target-repository
+        git checkout ${{ inputs.version-prefix }}${{ inputs.to-version }}
 
     # Existing actions usually rely on git tags and don't work with plain revisions.
     # Building a simple changelog explicitly.
     - name: Get Changelog
       if: ${{ steps.changed.outputs.changed == 'true' }}
       id: changelog
-      shell: bash      
+      shell: bash
       run: |
         cd target-repository
         
