@@ -1,5 +1,5 @@
 name: 'Build changelog between two revisions'
-description: 'Checkout a repository on the specified branch and construct a changelog between specified revisions.'
+description: 'Checkout a repository and construct a changelog between specified revisions.'
 
 inputs:
   repository:
