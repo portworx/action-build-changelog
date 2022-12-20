@@ -71,6 +71,10 @@ runs:
         log+=$(git log "${from}..${to}" \
             --pretty=format:"- [%h](http://github.com/${{ inputs.repository }}/commit/%H) - %s (%aN)")
 
+        log="${log//'`'/'\`'}"
+        log="${log//'"'/'\"'}"
+        log="${log//'%'/'%25'}"
+
         # Add full repository qualifier to PR references.
         # Changes PR-number strings like '(#100)' into '(owner/repository#100)'.
         log=$(echo "$log" | sed -r 's|\(#([0-9]+)\)|(${{ inputs.repository }}#\1)|g')
